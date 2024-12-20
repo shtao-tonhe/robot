@@ -6,8 +6,7 @@ const common = require('./common')
 let reqSpeed = 1
 let lastReqTime
 
-const cookie = 'abRequestId=feac7708-feb5-5881-a671-08bc796b3449; a1=191b0d47914iol06xlty58ohns5oqajtylxos6r7950000951776; webId=f196b09d4218e3fd5b64ce71cc65d978; gid=yjyD8f4Y4yvJyjyD8f4Wj1KFy43l18KC19v2CWjYlxIM2l28lA0V9M888j2yWWK80WDq4iyf; webBuild=4.48.0; xsecappid=xhs-pc-web; web_session=040069b01f8857582649027b50354b8e539b39; unread={%22ub%22:%226760e9030000000014021867%22%2C%22ue%22:%22674065ec0000000006014215%22%2C%22uc%22:29}; acw_tc=0a4a7a1b17346881597361592e35c89aabd02c8d9500e8823156956c09630b; websectiga=3fff3a6f9f07284b62c0f2ebf91a3b10193175c06e4f71492b60e056edcdebb2; sec_poison_id=152eef44-54a5-43ba-b442-e3c464d332e0';
-const oldCookie = 'abRequestId=6a42c3f7-5f4c-572e-9847-bc733cc61073; a1=18f74e3b0e2m6jaraiqcaajn8bmz3765wou17xhp030000156562; webId=6cf889e2d027fb9172e3e69efc3394dc; gid=yYiW4dqDYiEJyYiW4dqD8lCxdJ6KV0F03AS07U80VIYD6yq8uqWK2W888y2K2KJ8K8JJKiYi; web_session=040069799389ab765b50575be0344b9d3c063b; customer-sso-sid=68c517410666572733120337df34ff2b8bc1aac1; x-user-id-creator.xiaohongshu.com=5ef20f0f000000000100483a; customerClientId=965656639764280; access-token-creator.xiaohongshu.com=customer.creator.AT-68c517410666577028087634yjkb5nvv6t2bnb14; galaxy_creator_session_id=LLUI5RgXpnMwRDhSjFKsVVYihXban6SgJrqJ; galaxy.creator.beaker.session.id=1725430269055031096045; xsecappid=xhs-pc-web; webBuild=4.33.2; acw_tc=516c79762347783762729be84a3278a50c63269cd67f21690139e726ddee98c2; websectiga=7750c37de43b7be9de8ed9ff8ea0e576519e8cd2157322eb972ecb429a7735d4; sec_poison_id=d8892cdd-5821-4891-8304-217ab4821b93; unread={%22ub%22:%2266d9e6bf0000000025033c16%22%2C%22ue%22:%2266da5a9a00000000250307c3%22%2C%22uc%22:29}';
+const cookie = 'abRequestId=b0f72f00-c169-5060-b6a1-1846373b6d39; xsecappid=xhs-pc-web; a1=192b465edda3ko02nyoawbo2ca38uqtkl205ks2l530000361395; webId=eb1c6f7c26c0ccfe413e0fd0bf26df8b; gid=yjJD4K2i4d1JyjJD4K2dfJMJf0qTl8JIvl0E812DlJS0q2q8Y7A9TT888qKyqj28qq8484fD; webBuild=4.48.0; acw_tc=0a50895617347155409792527eec71aa04c4d2b0a899ea69c7ddaf183f7900; web_session=040069b01f8857582649cce050354bab93a1b8';
 
 const client = new XhsClient({
   cookie: cookie
@@ -16,6 +15,7 @@ const client = new XhsClient({
 const db = require('./db/db');
 const userM = require('./db/models/user')
 const noteM = require('./db/models/note')
+const replyM = require('./db/models/reply')
 
 async function checkReqTime(){
   return new Promise((resolve, reject) => {
@@ -31,14 +31,101 @@ async function checkReqTime(){
   })
 }
 
-function test_getNoteById() {
-  const noteId = '66d90590000000001f01fe31';
-  client.getNoteById(noteId).then(async res => {
-    console.log('笔记数据:', res);
-    await common.writeJsonToFile('./data/getNoteById.json', res);
-  })
+// 在事务中批量插入帖子评论
+async function insertNoteReplys(replysData, usersData) {
+  const connection = await db.getConnection();
+  try {
+      await connection.beginTransaction();
+
+      if (replysData.length > 0) {
+        await replyM.bulkCreateReplys(replysData, connection);
+      }
+
+      await connection.commit();
+  } catch (err) {
+      await connection.rollback();
+      throw err;
+  } finally {
+      connection.release();
+  }
 }
-// test_getNoteById()
+async function getNoteComments() {
+  if (!await checkReqTime()) return false
+
+  try {
+    const noteId = '67623e81000000000800d41e';
+    const reqResult = await client.getNoteComments(noteId)
+    console.log('帖子评论--:', reqResult)
+
+    if (reqResult.error && reqResult.error === 10086) return false
+
+    // 最外层的评论 不算回复
+    if (reqResult.comments.length > 0) {
+      const replysData = []
+
+      // 回复内容数量
+      // sub_comment_count
+
+      for (const reply of reqResult.comments) {
+        if (
+          reply.id &&
+          reply.user_info &&
+          reply.note_id &&
+          reply.content
+        ) {
+          replysData.push({
+            replyId: reply.id,
+            userId: reply.user_info.user_id,
+            noteId: reply.note_id,
+            targetId: reply.note_id,
+            content: reply.content,
+          })
+        }
+      }
+
+      // 使用事务批量插入数据
+      await insertNoteReplys(replysData)
+    }
+  } catch (error) {
+    console.error('Error processing search results:', error)
+  }
+}
+getNoteComments()
+
+
+async function getNoteById() {
+  if (!await checkReqTime()) return false
+
+  try {
+    const noteId = '6756bb6200000000010286ab';
+    const reqResult = await client.getNoteById(noteId)
+    console.log('帖子详情--:', reqResult)
+
+    if (reqResult.error && reqResult.error === 10086) return false
+
+    if (reqResult.length > 0) {
+      const replysData = []
+
+      // for (const reply of reqResult.items) {
+      //   if (
+      //     reply.id
+      //   ) {
+      //     replysData.push({
+      //       noteId: note.id,
+      //       uid: note.note_card.user.user_id,
+      //       likes: note.note_card.interact_info.liked_count,
+      //     })
+      //   }
+      // }
+
+      // 使用事务批量插入数据
+      // await insertNoteReplys(replysData)
+    }
+  } catch (error) {
+    console.error('Error processing search results:', error)
+  }
+}
+// getNoteById()
 
 function test_getNoteByIdFromHtml() {
   const client = new XhsClient({
@@ -46,13 +133,13 @@ function test_getNoteByIdFromHtml() {
   });
   const noteId = '66d90590000000001f01fe31';
   client.getNoteByIdFromHtml(noteId).then(res => {
-    console.log('笔记数据:', res)
+    console.log('帖子数据:', res)
   })
 }
 // test_getNoteByIdFromHtml()
 
 
-// 在事务中批量插入笔记和用户数据
+// 在事务中批量插入帖子和用户数据
 async function insertNotesAndUsers(notesData, usersData) {
   const connection = await db.getConnection();
   try {
@@ -121,7 +208,7 @@ async function testSearchNote() {
     console.error('Error processing search results:', error)
   }
 }
-testSearchNote()
+// testSearchNote()
 
 //获取相关热词
 async function getHotrKeyWord() {
@@ -142,22 +229,22 @@ async function getHotrKeyWord() {
 }
 
 
-
-//获取指定用户的笔记列表
+//获取指定用户的帖子列表
 async function testGetUserNotes() {
   const client = new XhsClient({
     cookie: cookie
   });
   const noteId = '66f14967000000001d021c2d';
   const result = await client.getUserNotes( noteId );
-  console.log('获取用户笔记列表:', result);
+  console.log('获取用户帖子列表:', result);
 
   // 写入文件
   // await common.writeJsonToFile('./data/userNoteList.json', result);
 }
 // testGetUserNotes()
 
-//获取指定用户的笔记列表
+
+//获取指定用户的帖子列表
 async function testGetNoteComments() {
   const client = new XhsClient({
     cookie: cookie
@@ -169,6 +256,7 @@ async function testGetNoteComments() {
   await common.writeJsonToFile('./data/noteComments.json', result);
 }
 // testGetNoteComments()
+
 
 //添加评论
 async function testAddNoteComment() {

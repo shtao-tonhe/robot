@@ -307,15 +307,9 @@ class XhsClient {
     const params = {
       "note_id": noteId,
       "cursor": cursor,
-    }
-    return this.get(uri, params);
-  }
-
-  async getNoteComments(noteId, cursor = "") {
-    const uri = "/api/sns/web/v2/comment/page"
-    const params = {
-      "note_id": noteId,
-      "cursor": cursor,
+      "top_comment_id": "",
+      "image_formats": "jpg,webp,avif",
+      "xsec_token": "ABV64vjnijNrTkTsKsH1TTKMQXa_qFNeRY73cBK8C5X_Y="
     }
     return this.get(uri, params);
   }
