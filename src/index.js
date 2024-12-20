@@ -1,19 +1,24 @@
-const axios = require('axios');
-const qs = require('querystring');
-const { get_xs } = require('./jsvmp/xhs');
+const axios = require('axios')
+const qs = require('querystring')
+const { get_xs } = require('./jsvmp/xhs')
+const dayjs = require('dayjs')
 const {
   getXCommon,
   getSearchId,
   SearchSortType,
   SearchNoteType
-} = require('./help');
+} = require('./help')
 const {
   ErrorEnum,
   DataFetchError,
   IPBlockError,
   SignError,
   NeedVerifyError
-} = require('./exception');
+} = require('./exception')
+
+const {
+  setLog
+} = require('../util')
 
 
 
@@ -69,22 +74,19 @@ class XhsClient {
     const X_t = x_s_result['X-t'].toString()
     const X_S_COMMON = getXCommon(a1, b1, X_S, X_t)
     this.axiosInstance.defaults.headers['X-s'] = X_S
-    this.axiosInstance.defaults.headers['X-t'] = X_t
-    this.axiosInstance.defaults.headers['X-s-common'] = X_S_COMMON
+    // this.axiosInstance.defaults.headers['X-t'] = X_t
+    // this.axiosInstance.defaults.headers['X-s-common'] = X_S_COMMON
   }
 
   async request(method, url, config = {}) {
     try {
       const response = await this.axiosInstance({ method, url, ...config });
+      console.log('req-confgig-----------', response)
       if (!response.data) return response;
-      // console.log('response', response)
-      if (response.status === 471 || response.status === 461) {
-        const verifyType = response.headers['verifytype'];
-        const verifyUuid = response.headers['verifyuuid'];
-        throw new NeedVerifyError(`出现验证码，请求失败，Verifytype: ${verifyType}，Verifyuuid: ${verifyUuid}`, response, verifyType, verifyUuid);
-      }
 
       const data = response.data;
+      // console.log('---api---data---',data)
+      setLog(url,  response.config.data, response.status)
       if (data.success) {
         return data.data || data.success;
       } else if (data.code === ErrorEnum.IP_BLOCK.code) {
@@ -96,17 +98,24 @@ class XhsClient {
         // throw new DataFetchError(data, response);
       }
     } catch (error) {
-      if (error.response && (error.response.status === 471 || error.response.status) === 461) {
-        // Handle verification error
-        const verifyType = error.response.headers['verifytype'];
-        const verifyUuid = error.response.headers['verifyuuid'];
-        throw new NeedVerifyError(`出现验证码，请求失败，Verifytype: ${verifyType}，Verifyuuid: ${verifyUuid}`, error.response, verifyType, verifyUuid);
-      }
+      // console.log('---api---error---',error)
+      setLog(url,  error.response.config.data, error.response.status)
       throw error;
     }
   }
 
+
+  async testGet() {
+    const uri = "/api/sns/web/v2/comment/page"
+    const params = {
+      "note_id": 123,
+      "cursor": 456,
+    }
+    return this.post(uri, params);
+  }
+
   async get(uri, params = null, isCreator = false, isCustomer = false, config = {}) {
+    await setLog({uri:uri, data:params})
     let finalUri = uri;
     if (params) {
       finalUri = `${uri}?${qs.stringify(params)}`;
@@ -122,6 +131,7 @@ class XhsClient {
   }
 
   async post(uri, data = null, isCreator = false, isCustomer = false, config = {}) {
+    await setLog({uri:uri, data:data})
     let jsonStr = data ? JSON.stringify(data) : null;
     this._preHeaders(uri, data);
     let endpoint = this._host;
@@ -270,11 +280,37 @@ class XhsClient {
   }
 
   /**
+   * 相关搜索热词
+   * @param {*} keyword
+   * @returns
+   */
+  async getNoteByKeywordV2(
+    keyword,
+  ) {
+    const uri = "/api/sns/web/v1/search/filters";
+    const data = {
+      keyword: keyword,
+      search_id: getSearchId(),
+    };
+
+    return this.get(uri, data);
+  }
+
+  /**
    * 获取笔记评论
    * @param {string} noteId 笔记id
    * @param {string} cursor 分页查询的下标,默认为""
    * @returns
    */
+  async getNoteComments(noteId, cursor = "") {
+    const uri = "/api/sns/web/v2/comment/page"
+    const params = {
+      "note_id": noteId,
+      "cursor": cursor,
+    }
+    return this.get(uri, params);
+  }
+
   async getNoteComments(noteId, cursor = "") {
     const uri = "/api/sns/web/v2/comment/page"
     const params = {
