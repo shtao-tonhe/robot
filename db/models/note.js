@@ -6,6 +6,10 @@ module.exports = {
     getAllNotes: async () => {
         return await db.query(`SELECT * FROM ${tablePrefix}notes`);
     },
+    getLastNote: async () => {
+        const [note] = await db.query(`SELECT * FROM ${tablePrefix}notes ORDER BY id DESC LIMIT 1`);
+        return note || null;
+    },
     getNoteById: async (id) => {
         const [note] = await db.query(`SELECT * FROM ${tablePrefix}notes WHERE id = ?`, [id]);
         return note || null;
@@ -43,11 +47,11 @@ module.exports = {
                 }
 
                 // 构建批量插入所需的占位符和值数组
-                const placeholders = validNotes.map(() => '(?, ?, ?)').join(', ');
-                const values = validNotes.flatMap(note => [note.noteId, note.uid, note.likes]);
+                const placeholders = validNotes.map(() => '(?, ?, ?, ?)').join(', ');
+                const values = validNotes.flatMap(note => [note.noteId, note.uid, note.likes, note.extend]);
 
                 await connection.query(
-                    `INSERT INTO ${tablePrefix}notes (note_id, source_uid, likes) VALUES ${placeholders}`,
+                    `INSERT INTO ${tablePrefix}notes (note_id, source_uid, likes, source_extend) VALUES ${placeholders}`,
                     values
                 );
             }

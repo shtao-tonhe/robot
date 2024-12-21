@@ -6,14 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Robot - TonheCloud</title>
   <link rel="icon" href="./statis/bug.png" type="image/x-icon" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css">
-  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
-  <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.6/lib/index.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
-  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="./statis/js/vue.js"></script>
+  <script src="./statis/js/typed.js"></script>
+  <script src="./statis/js/ele.js"></script>
+  <script src="./statis/js/dayjs.js"></script>
+  <script src="./statis/js/lodash.js"></script>
 
+  <link rel="stylesheet" href="./statis/css/animate.css">
+  <link rel="stylesheet" href="./statis/css/ele.css">
   <link rel="stylesheet" href="./statis/css/base.css">
+
   </link>
 </head>
 
@@ -22,10 +24,11 @@
     <div class="page">
       <div class="top-nav">
         <div class="top-main">
-          <div class="logo animate__animated animate__backInRight">
-            <img src="./statis/img/bug.png" alt="">
+          <div class="logo animate__animated animate__backInRight" id="container">
+            <img src="./statis/img/bug.png" alt="" id="rotatingImage">
             <div class="logo-text">
-              <div class="title">Robot
+              <div class="title">
+                <span class="tt-t">Robot</span>
                 <div class="desc">Beta</div>
               </div>
             </div>
@@ -33,7 +36,7 @@
           <div class="sea-box  animate__animated animate__backInRight" :class="{ 'sea-box-active': isInputFocused }"
             style="animation-delay: .3s;">
             <input type="text" v-model="searchKeyword" @focus="isInputFocused = true" @blur="isInputFocused = false"
-              placeholder="🔥🔥 AI" @keyup.enter="search">
+              placeholder="🔥🔥 自媒体运营封号操作" @keyup.enter="search">
             <div class="icon" @click="search">
               <img src="./statis/img/sea.png" alt="">
             </div>
@@ -59,7 +62,7 @@
                 </div>
                 <div class="desc">
                   <span>小红书</span>
-                  <span>v0.0.1_Beta</span>
+                  <span>v0.0.2</span>
                 </div>
               </div>
               <div class="type-item" :class="{ 'type-item-active': currentTopNav === 1 }" @click="currentTopNav=1">
@@ -168,9 +171,11 @@
               <div class="left-type">
                 <div class="l-t-item" :class="{'l-t-item-active': nav.sname === currentLeftNav}" @click="checkNav(nav)"
                   v-for="(nav, index) in leftNav" :key="index">
-                  {{nav.name}}</div>
+                  <span>{{nav.name}}</span>
+                  <span class="l-t-tips">{{nav.tips}}</span>
+                </div>
               </div>
-              <div class="win-data" v-if="currentLeftNav === 'system'">
+              <div class="win-data" v-if="currentLeftNav === 'main'">
                 <div class="data-box">
                   <div class="box-top">自动执行配置</div>
                   <div class="box-list">
@@ -267,7 +272,7 @@
             <div class="box-main">
               <div class="l-option">
                 <div class="opt-i" style="letter-spacing: 4px;">捕获重载</div>
-                <span style="line-height: 31px;letter-spacing: 2px;margin-right: 10px;">共计执行: 10023</span>
+                <span style="line-height: 31px;letter-spacing: 2px;margin-right: 10px;">执行: 10023</span>
                 <span style="line-height: 31px;letter-spacing: 2px;margin-right: 10px;">读取: 9180</span>
                 <span style="line-height: 31px;letter-spacing: 2px;margin-right: 10px;">写入: 815</span>
               </div>
@@ -325,27 +330,32 @@
         isInputFocused: false,
         authToken: null,
         leftNav: [
-          { id: 1, sname: 'system', name: '整体配置' },
-          { id: 2, sname: 'apis', name: 'API配置' },
+          { id: 1, sname: 'main',   name: '主体配置', tips:'' },
+          { id: 2, sname: 'apis',   name: 'API配置',  tips:'' },
+          { id: 3, sname: 'hooks',  name: '7*24推送', tips:'短信/微信/邮箱/钉钉' },
+          { id: 4, sname: 'black',  name: '违规自查', tips:'' },
+          { id: 5, sname: 'change', name: '文案转改', tips:'生成/转改/多文一意' },
+          { id: 6, sname: 'admin',  name: '数据档案', tips:'后台元数据归档' },
+          { id: 7, sname: 'chart',  name: '溯源分析', tips:'用户画像' },
         ],
         currentTopNav: 0,
-        currentLeftNav: 'system',
+        currentLeftNav: 'main',
         runList:[
-        { data: '检索博主', time: '2024-11-03 20:03:11' },
-        { data: '检索回复', time: '2024-11-03 20:03:11' },
-        { data: '评论内容', time: '2024-11-03 20:03:11' },
-        { data: '检索博主', time: '2024-11-03 20:03:11' },
-        { data: '检索回复', time: '2024-11-03 20:03:11' },
-        { data: '评论内容', time: '2024-11-03 20:03:11' },
+        { data: '检索博主', time: '2024-12-11 20:03:11' },
+        { data: '检索回复', time: '2024-12-11 20:03:11' },
+        { data: '评论内容', time: '2024-12-11 20:03:11' },
+        { data: '检索博主', time: '2024-12-11 20:03:11' },
+        { data: '检索回复', time: '2024-12-11 20:03:11' },
+        { data: '评论内容', time: '2024-12-11 20:03:11' },
         ],
         logList: [
-          { data: 200, time: '2024-11-03 20:03:11' },
-          { data: null, time: '2024-11-02 20:03:11' },
-          { data: 200, time: '2024-11-01 20:03:11' },
-          { data: 200, time: '2024-11-01 20:03:11' },
-          { data: 200, time: '2024-11-03 20:03:11' },
-          { data: null, time: '2024-11-02 20:03:11' },
-          { data: 200, time: '2024-11-01 20:03:11' },
+          { data: 200, time: '2024-12-11 20:03:11' },
+          { data: null,time: '2024-12-11 20:03:11' },
+          { data: 200, time: '2024-12-11 20:03:11' },
+          { data: 200, time: '2024-12-11 20:03:11' },
+          { data: 200, time: '2024-12-11 20:03:11' },
+          { data: null,time: '2024-12-11 20:03:11' },
+          { data: 200, time: '2024-12-11 20:03:11' },
         ],
         reqLogTimer: null,
       };
@@ -362,7 +372,31 @@
       this.reloadAutoConfig()
     },
 
+    mounted() {
+      this.mousePosition = { x: 0, y: 0 };
+      this.imgElement = document.getElementById('rotatingImage');
+      this.throttledMouseMove = _.throttle(this.handleMouseMove.bind(this), 16);
+      document.addEventListener('mousemove', this.throttledMouseMove);
+    },
+
+    beforeDestroy() {
+      document.removeEventListener('mousemove', this.handleMouseMove);
+    },
+
     methods: {
+      handleMouseMove(event){
+        requestAnimationFrame(() => {
+          this.mousePosition.x = event.clientX;
+          this.mousePosition.y = event.clientY;
+
+          const rect = this.imgElement.getBoundingClientRect();
+          const dx = this.mousePosition.x - (rect.left + rect.width / 2);
+          const dy = this.mousePosition.y - (rect.top + rect.height / 2);
+          let angle = Math.atan2(dy, dx) * (180 / Math.PI)+100;
+
+          this.imgElement.style.transform = `rotate(${angle}deg) translateZ(0)`;
+        });
+      },
       async reloadAutoConfig(){
         const reqData = new FormData();
         reqData.append('cron', '25 17 * * *')
@@ -437,7 +471,7 @@
       },
 
       search() {
-        const url = this.searchKeyword ? `https://www.bing.com/search?form=&q=${this.searchKeyword.trim()}` : 'https://tongyi.aliyun.com'
+        const url = this.searchKeyword ? `https://www.bing.com/search?form=&q=${this.searchKeyword.trim()}` : 'https://www.zhihu.com/search?type=content&q=%E8%87%AA%E5%AA%92%E4%BD%93%E8%BF%90%E8%90%A5%E5%B0%81%E5%8F%B7%E6%93%8D%E4%BD%9C'
         window.open(url)
       },
 
@@ -491,23 +525,31 @@
 
     .top-main {
       width: 100%;
-      margin: 0 210px;
+      margin: 0 5%;
       display: flex;
       flex-direction: row;
       justify-content: space-between;
       align-items: center;
 
       .logo {
-        padding: 10px 50px 10px 30px;
+        /* padding: 10px 50px 10px 30px;
         border-radius: 4px;
         display: flex;
         align-items: flex-end;
         justify-content: center;
         box-shadow: 0 0 11px 1px rgba(0, 0, 0, .12);
+        background-image: linear-gradient(135deg, rgba(226, 209, 195, .7) 0%, #B5B4AF 100%); */
+        padding: 12px 53px 9px 23px;
+        border-radius: 4px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        box-shadow: 0px 2px 7px 1px rgba(0, 0, 0, .2);
         background-image: linear-gradient(135deg, rgba(226, 209, 195, .7) 0%, #B5B4AF 100%);
 
         img {
           width: 30px;
+          margin-right: 2px;
           height: 30px;
           -webkit-filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, .5));
           filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, .5));
@@ -519,25 +561,30 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-
-          .title {
-            font-size: 14px;
-            font-weight: 600;
+          .tt-t {
             margin-bottom: 2px;
+            font-weight: 600;
+            font-size: 17px;
+            text-shadow: 1px 3px 3px rgba(0, 0, 0, .2);
+            letter-spacing: 1px;
+          }
+          .title {
             position: relative;
-
+            color: #000;
             .desc {
-              padding: 0px 3px;
+              padding: 2px 4px;
               position: absolute;
-              top: -9px;
-              right: -26px;
-              font-size: 10px;
+              top: -11px;
+              right: -35px;
+              font-size: 11px;
               background: #000000;
-              border-radius: 5px;
+              border-radius: 4px;
               color: #fff;
               display: flex;
               align-items: center;
               justify-content: center;
+              font-weight: 400;
+              letter-spacing: 1px;
             }
           }
         }
@@ -705,14 +752,14 @@
             .desc {
               transition: .3s;
               margin-left: 5px;
-              font-size: 13px;
+              font-size: 14px;
               display: flex;
               flex-direction: column;
               align-items: flex-start;
               color: rgba(0, 0, 0, .55);
 
               span:nth-child(2) {
-                font-size: 10px;
+                font-size: 12px;
               }
             }
           }
@@ -759,12 +806,19 @@
             .l-t-item {
               color: rgba(0, 0, 0, .45);
               cursor: pointer;
-              padding: 20px 10px 20px 13px;
-              margin-left: 10px;
+              padding: 15px 10px 15px 13px;
               display: flex;
-              align-items: center;
+              align-items: flex-start;
+              flex-direction: column;
               letter-spacing: 1.5px;
-              font-size: 13px;
+              font-size: 14px;
+              border-bottom: 1px solid #0000001c;
+              .l-t-tips {
+                margin-top: 3px;
+                font-size: 12px;
+                letter-spacing: 2px;
+                color: #e024a0;
+              }
             }
 
             .l-t-item:hover {

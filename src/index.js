@@ -299,17 +299,18 @@ class XhsClient {
   /**
    * 获取笔记评论
    * @param {string} noteId 笔记id
+   * @param {string} xsec_token 笔记token
    * @param {string} cursor 分页查询的下标,默认为""
    * @returns
    */
-  async getNoteComments(noteId, cursor = "") {
+  async getNoteComments(noteId, xsec_token, cursor = "") {
     const uri = "/api/sns/web/v2/comment/page"
     const params = {
       "note_id": noteId,
       "cursor": cursor,
       "top_comment_id": "",
       "image_formats": "jpg,webp,avif",
-      "xsec_token": "ABV64vjnijNrTkTsKsH1TTKMQXa_qFNeRY73cBK8C5X_Y="
+      "xsec_token": xsec_token
     }
     return this.get(uri, params);
   }
@@ -322,16 +323,18 @@ class XhsClient {
    * @returns
    */
   async addNoteComment(noteId, target_comment_id, content ) {
-    if( !noteId || !content || !target_comment_id ) return;
+    if( !noteId || !content ) return;
 
     const uri = "/api/sns/web/v1/comment/post"
     const params = {
       "note_id": noteId,
-      "target_comment_id": target_comment_id,
       "content": content,
       "at_users": []
     }
-    return this.post(uri, params);
+    if( target_comment_id ) params.target_comment_id = target_comment_id
+    const res = await this.post(uri, params)
+    console.log('添加评论--controller---', res)
+    return res
   }
 
   /**

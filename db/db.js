@@ -3,7 +3,7 @@ const mysql = require('mysql2/promise');
 const config = {
     host: 'localhost',
     user: 'root',
-    password: '12345678',
+    password: 'root',
     database: 'robot',
 };
 

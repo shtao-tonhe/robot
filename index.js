@@ -6,11 +6,15 @@ const common = require('./common')
 let reqSpeed = 1
 let lastReqTime
 
-const cookie = 'abRequestId=b0f72f00-c169-5060-b6a1-1846373b6d39; xsecappid=xhs-pc-web; a1=192b465edda3ko02nyoawbo2ca38uqtkl205ks2l530000361395; webId=eb1c6f7c26c0ccfe413e0fd0bf26df8b; gid=yjJD4K2i4d1JyjJD4K2dfJMJf0qTl8JIvl0E812DlJS0q2q8Y7A9TT888qKyqj28qq8484fD; webBuild=4.48.0; acw_tc=0a50895617347155409792527eec71aa04c4d2b0a899ea69c7ddaf183f7900; web_session=040069b01f8857582649cce050354bab93a1b8';
+const cookie = 'abRequestId=feac7708-feb5-5881-a671-08bc796b3449; a1=191b0d47914iol06xlty58ohns5oqajtylxos6r7950000951776; webId=f196b09d4218e3fd5b64ce71cc65d978; gid=yjyD8f4Y4yvJyjyD8f4Wj1KFy43l18KC19v2CWjYlxIM2l28lA0V9M888j2yWWK80WDq4iyf; xsecappid=xhs-pc-web; webBuild=4.48.0; websectiga=984412fef754c018e472127b8effd174be8a5d51061c991aadd200c69a2801d6; sec_poison_id=7974ab5d-6401-4dc3-b45e-c0b84f0b2eb5; acw_tc=0a4add3517347475390975529ebb135a4e94f1c5f4a4249f07a593179f62ba; web_session=040069b01f8857582649ca6d53354b23813bbb';
 
 const client = new XhsClient({
   cookie: cookie
 })
+
+const {
+  setDesc
+} = require('./util')
 
 const db = require('./db/db');
 const userM = require('./db/models/user')
@@ -49,17 +53,26 @@ async function insertNoteReplys(replysData, usersData) {
       connection.release();
   }
 }
+//获取帖子评论【一级】
 async function getNoteComments() {
   if (!await checkReqTime()) return false
 
   try {
-    const noteId = '67623e81000000000800d41e';
-    const reqResult = await client.getNoteComments(noteId)
-    console.log('帖子评论--:', reqResult)
+    const lastNote = await noteM.getLastNote()
+    console.log('最后帖子1id--:', lastNote)
+    console.log('最后帖子0id--:', typeof(lastNote))
+    if (!lastNote || !lastNote.note_id) {
+      setDesc('获取帖子评论---没有找到帖子--无法获取')
+      return false
+    }
+
+    const extendData = JSON.parse(lastNote.source_extend)
+
+    const reqResult = await client.getNoteComments(lastNote.note_id, extendData.xsec_token)
 
     if (reqResult.error && reqResult.error === 10086) return false
 
-    // 最外层的评论 不算回复
+    // 最外层的评论 没考虑不算子级回复的
     if (reqResult.comments.length > 0) {
       const replysData = []
 
@@ -79,6 +92,7 @@ async function getNoteComments() {
             noteId: reply.note_id,
             targetId: reply.note_id,
             content: reply.content,
+            createTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
           })
         }
       }
@@ -90,7 +104,7 @@ async function getNoteComments() {
     console.error('Error processing search results:', error)
   }
 }
-getNoteComments()
+// getNoteComments()
 
 
 async function getNoteById() {
@@ -163,15 +177,19 @@ async function insertNotesAndUsers(notesData, usersData) {
 }
 async function testSearchNote() {
   if (!await checkReqTime()) return false
-  const keyword = '哈尔滨'
+  const keyword = '健身'
 
   try {
     const reqResult = await client.getNoteByKeyword(keyword)
     console.log('搜索结果1--:', reqResult)
 
-    if (reqResult.error && reqResult.error === 10086) return false
+    if (reqResult.error && reqResult.error === 10086){
+      setDesc('搜索帖子失败')
+      return false
+    }
 
     if (reqResult.items.length > 0) {
+      setDesc(`搜索帖子成功--共计：${reqResult.items.length}条`)
       // 收集需要插入的数据
       const notesData = []
       const usersData = []
@@ -180,6 +198,7 @@ async function testSearchNote() {
         if (
           note.id &&
           note.note_card &&
+          note.xsec_token &&
           note.note_card.user &&
           note.note_card.user.user_id &&
           note.note_card.user.nickname &&
@@ -191,6 +210,9 @@ async function testSearchNote() {
             noteId: note.id,
             uid: note.note_card.user.user_id,
             likes: note.note_card.interact_info.liked_count,
+            extend: JSON.stringify({
+              xsec_token: note.xsec_token
+            }),
           })
 
           usersData.push({
@@ -205,6 +227,7 @@ async function testSearchNote() {
       await insertNotesAndUsers(notesData, usersData)
     }
   } catch (error) {
+    setDesc('搜索帖子失败')
     console.error('Error processing search results:', error)
   }
 }
@@ -228,7 +251,6 @@ async function getHotrKeyWord() {
   }
 }
 
-
 //获取指定用户的帖子列表
 async function testGetUserNotes() {
   const client = new XhsClient({
@@ -244,35 +266,54 @@ async function testGetUserNotes() {
 // testGetUserNotes()
 
 
-//获取指定用户的帖子列表
-async function testGetNoteComments() {
-  const client = new XhsClient({
-    cookie: cookie
-  });
-  const noteId = '6718944a000000001402c5c1';
-  const result = await client.getNoteComments( noteId );
+//发布评论
+async function addNoteComment() {
+  try{
+    const lastNote = await noteM.getLastNote()
+    console.log('最后帖子1id--:', lastNote)
 
-  // 写入文件
-  await common.writeJsonToFile('./data/noteComments.json', result);
+    if (!lastNote || !lastNote.note_id) {
+      setDesc('获取帖子评论---没有找到帖子--无法获取')
+      return false
+    }
+
+    //帖子ID
+    const noteId = lastNote.note_id
+
+    // 回复评论ID
+    const target_comment_id = null
+
+    //评论内容
+    const content = '24要结束了'
+
+    //@的用户
+    const at_users = []
+    const apiRes = await client.addNoteComment( noteId, target_comment_id, content)
+
+    console.log('Api---发布评论--:', apiRes)
+
+    if( !apiRes || (apiRes.error && apiRes.error === 10086) ){
+      setDesc('发布评论失败')
+      return false
+    }else{
+      setDesc('发布评论成功')
+      const replysData= []
+      replysData.push({
+        replyId: apiRes.comment.id,
+        userId: apiRes.comment.user_info.user_id,
+        noteId: lastNote.note_id,
+        targetId: lastNote.note_id,
+        content: content,
+        createTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      })
+      await insertNoteReplys(replysData)
+    }
+  } catch (error) {
+    setDesc('添加评论失败')
+    console.error('Error processing search results:', error)
+  }
 }
-// testGetNoteComments()
-
-
-//添加评论
-async function testAddNoteComment() {
-  const client = new XhsClient({
-    cookie: cookie
-  });
-  const noteId = '6718944a000000001402c5c1'; //帖子ID
-  const target_comment_id = '67192f70000000001b024fdc';//需要回复的评论ID
-  const content = '现在主播很多的吧？';//回复内容
-  const at_users = [];//@的用户
-  const result = await client.addNoteComment( noteId, target_comment_id, content);
-
-  // 写入文件
-  await common.writeJsonToFile('./data/addNoteComment.json', result);
-}
-// testAddNoteComment()
+// addNoteComment()
 
 
 

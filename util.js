@@ -15,5 +15,17 @@ async function setLog( uri, data, code ){
     return true
 }
 
-module.exports = { setLog }
+async function setDesc( desc, source=1 ){
+    const logData = {
+        source: source,
+        content: JSON.stringify({
+            data: desc
+        }),
+        create_time: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    }
+    await logM.createLog(logData)
+    return true
+}
+
+module.exports = { setDesc, setLog }
 
